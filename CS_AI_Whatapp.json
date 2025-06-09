@@ -1,0 +1,336 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "model": "deepseek/deepseek-chat-v3-0324:free",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        460,
+        220
+      ],
+      "id": "7a7cc3d4-cdf8-478c-a610-f868746580b0",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "naxizLqPEuz7WwbL",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Ch1cIiY6fDYE_Cck9aRpJRZI9sPXYlVpX4VThCJCcMw",
+          "mode": "list",
+          "cachedResultName": "N8n Product",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Ch1cIiY6fDYE_Cck9aRpJRZI9sPXYlVpX4VThCJCcMw/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Ch1cIiY6fDYE_Cck9aRpJRZI9sPXYlVpX4VThCJCcMw/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.6,
+      "position": [
+        700,
+        220
+      ],
+      "id": "f3c11086-14b9-4fb8-89f4-3f68b43607c4",
+      "name": "Google Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "01PdvFqNZ9tvYBV6",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "waha",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -200,
+        0
+      ],
+      "id": "517e8862-a240-4f08-b12e-ce7d3c75a177",
+      "name": "Webhook",
+      "webhookId": "24930e5d-320e-4262-bdf5-dc565b352051"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=The following is a WhatsApp message received from a user:\nUser ID: {{ $('Webhook').item.json.body.payload.from }}\nMessage: {{ $('Webhook').item.json.body.payload.body }}",
+        "options": {
+          "systemMessage": "Gunakan data dari spreadsheet yang diberikan untuk menjawab pertanyaan tentang stok atau harga produk. Jika produk tidak ditemukan, jawab 'Produk tidak ditemukan."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        492,
+        0
+      ],
+      "id": "efa96ea5-290f-43e0-91f0-77b3947642dc",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Webhook').item.json.body.payload.from }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        580,
+        220
+      ],
+      "id": "7a88caac-15ed-43b2-bdba-336fceef832e",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://waha:3000/api/sendText",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chatId\": \"{{ $('Webhook').item.json.body.payload.from }}\",\n  \"reply_to\": null,\n  \"text\": {{ JSON.stringify($('AI Agent1').item.json.output) }},\n  \"linkPreview\": true,\n  \"linkPreviewHighQuality\": false,\n  \"session\": \"default\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        0
+      ],
+      "id": "cd5e6a21-4da8-486b-81e1-21417d98cc62",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "PdcZPZ76ZBsrtHlZ",
+          "name": "Header Auth account Waha"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e2f4696d-25aa-4c90-b231-a94d24d3fddb",
+              "leftValue": "={{ $json.body.payload.from }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "061a6cb5-5320-447f-ac6b-930a39389887",
+              "leftValue": "={{ $json.body.payload.body }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        20,
+        0
+      ],
+      "id": "ab4f693e-6a58-4464-afb6-644d80227ef8",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://waha:3000/api/startTyping",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chatId\": \"{{ $json.body.payload.from }}\",\n  \"session\": \"default\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        0
+      ],
+      "id": "eacb8c56-f4a8-4c49-8ac4-2026a94a468d",
+      "name": "HTTP startTyping",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "PdcZPZ76ZBsrtHlZ",
+          "name": "Header Auth account Waha"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://waha:3000/api/stopTyping",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chatId\": \"{{ $('Webhook').item.json.body.payload.from }}\",\n  \"session\": \"default\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        900,
+        0
+      ],
+      "id": "1e29d783-ea32-456b-a740-a3c765ce28df",
+      "name": "HTTP stopTyping",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "PdcZPZ76ZBsrtHlZ",
+          "name": "Header Auth account Waha"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "HTTP stopTyping",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "HTTP startTyping",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP startTyping": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP stopTyping": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "86e94557-2070-423b-8734-b48e1baf2bfb",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "73c8e1d4b27fc882b732856c818f53b8eb650a41b282920f29ea03257aa48718"
+  },
+  "id": "HK0c2jnIX3IU4Zoa",
+  "tags": [
+    {
+      "createdAt": "2025-06-08T13:43:28.288Z",
+      "updatedAt": "2025-06-08T13:43:28.288Z",
+      "id": "W9PMMZh2n6BYnTen",
+      "name": "Testing"
+    }
+  ]
+}
